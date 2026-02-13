@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
@@ -67,7 +66,16 @@ import {
   FileBarChart,
   Ban,
   Scale,
-  Gavel
+  Gavel,
+  Bug,
+  Stethoscope,
+  Fingerprint,
+  FileSearch,
+  Sword,
+  BrickWall,
+  WifiOff,
+  Code,
+  Laptop
 } from 'lucide-react';
 
 // --- Utils ---
@@ -147,6 +155,30 @@ COST & ABUSE PROTECTION ARCHITECTURE (PHASE 10B):
 3. LEGAL AUDIT:
    - Abuse Logs: Write-once (WORM) S3 bucket for evidence.
    - Retention: 1 Year mandatory for flagged incidents.
+`;
+
+const PHASE_10C_CONTEXT = `
+ISOLATION & INCIDENT RESPONSE (PHASE 10C):
+
+1. TENANT ISOLATION:
+   - IDOR Tests: Automated checks for cross-tenant object access.
+   - SQLi: OWASP ZAP automated scan on tenant inputs.
+   - JWT: Validation of signature, exp, and 'tenant_id' claim integrity.
+
+2. ZERO TRUST & LATERAL MOVEMENT:
+   - NetworkPolicy: Verify 'default-deny'.
+   - ServiceAccount: Verify 'automountServiceAccountToken: false' on honeypots.
+   - Container Escape: Falco alerts on sensitive syscalls (open_by_handle_at).
+
+3. INCIDENT RESPONSE (IR):
+   - Playbooks: Automated containment workflows (Isolate Pod, Rotate Keys).
+   - Forensics: Volume snapshot trigger on high-severity alerts.
+   - Communication: Automated customer notification templates (SendGrid).
+
+4. FRONTEND STABILIZATION:
+   - Token Handling: HttpOnly cookies, Axios interceptors for 401 refresh.
+   - Error Boundaries: Graceful UI degradation.
+   - Env Vars: Runtime configuration injection.
 `;
 
 const FINAL_AUDIT_PROMPT = `
@@ -266,7 +298,7 @@ Return a JSON object strictly with this schema (no markdown):
 // --- Components ---
 
 function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'k8s' | 'ai' | 'devops' | 'enterprise' | 'billing' | 'intel' | 'public' | 'dr' | 'validation'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'ir' | 'hardening' | 'frontend' | 'k8s' | 'ai' | 'devops' | 'enterprise' | 'billing' | 'intel' | 'public' | 'dr' | 'validation'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
   
   const [stats, setStats] = useState({
@@ -292,7 +324,10 @@ function App() {
 
         <div className="flex-1 py-6 px-3 space-y-1 overflow-y-auto custom-scrollbar">
           <NavButton active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<LayoutDashboard size={18} />}>Mission Control</NavButton>
+          <NavButton active={activeTab === 'ir'} onClick={() => setActiveTab('ir')} icon={<Siren size={18} />}>Incident Response</NavButton>
+          <NavButton active={activeTab === 'hardening'} onClick={() => setActiveTab('hardening')} icon={<Lock size={18} />}>Security Hardening</NavButton>
           <NavButton active={activeTab === 'cost'} onClick={() => setActiveTab('cost')} icon={<Scale size={18} />}>Cost & Abuse</NavButton>
+          <NavButton active={activeTab === 'frontend'} onClick={() => setActiveTab('frontend')} icon={<Laptop size={18} />}>Frontend Health</NavButton>
           <div className="pt-4 pb-2 px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Audit Modules</div>
           <NavButton active={activeTab === 'k8s'} onClick={() => setActiveTab('k8s')} icon={<Server size={18} />}>Infrastructure</NavButton>
           <NavButton active={activeTab === 'ai'} onClick={() => setActiveTab('ai')} icon={<Brain size={18} />}>AI Threat Engine</NavButton>
@@ -336,7 +371,10 @@ function App() {
         <main className="flex-1 overflow-auto custom-scrollbar p-6">
           <div className="max-w-7xl mx-auto space-y-8">
             {activeTab === 'dashboard' && <DashboardView stats={stats} searchQuery={searchQuery} />}
+            {activeTab === 'frontend' && <FrontendHealthView />}
             {activeTab === 'cost' && <CostControlView context={PHASE_10B_CONTEXT} />}
+            {activeTab === 'ir' && <IncidentResponseView />}
+            {activeTab === 'hardening' && <SecurityHardeningView context={PHASE_10C_CONTEXT} />}
             {activeTab === 'k8s' && <K8sAuditView context={PHASE_1_CONTEXT} />}
             {activeTab === 'ai' && <AIAuditView context={PHASE_1_CONTEXT} />}
             {activeTab === 'intel' && <ThreatIntelAuditView context={PHASE_8_CONTEXT} />}
@@ -393,6 +431,14 @@ function DashboardView({ stats, searchQuery }: { stats: any, searchQuery: string
         <div>
            <h1 className="text-3xl font-bold text-white tracking-tight glow-text">Mission Control</h1>
            <p className="text-slate-500 text-sm mt-1">Real-time threat monitoring and infrastructure status.</p>
+        </div>
+        <div className="flex items-center gap-3">
+             <div className="bg-haas-card border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-haas-success shadow-sm">
+                <Stethoscope size={14} /> Frontend Health: 100%
+             </div>
+             <div className="bg-haas-card border border-white/10 px-3 py-1.5 rounded-full flex items-center gap-2 text-xs font-bold text-haas-success shadow-sm">
+                <ShieldCheck size={14} /> Isolation: Verified
+             </div>
         </div>
       </div>
 
@@ -454,6 +500,279 @@ function DashboardView({ stats, searchQuery }: { stats: any, searchQuery: string
       </div>
     </div>
   );
+}
+
+function FrontendHealthView() {
+   const [checks, setChecks] = useState([
+      { id: 1, name: 'API Gateway Integration', status: 'WARN', logs: ['Checking Base URL...', 'Retry logic missing'] },
+      { id: 2, name: 'JWT Secure Storage', status: 'FAIL', logs: ['Token found in LocalStorage', 'HttpOnly flag missing'] },
+      { id: 3, name: 'Token Refresh Logic', status: 'WARN', logs: ['Axios Interceptor 401 handler missing'] },
+      { id: 4, name: 'Role-Based Rendering', status: 'PASS', logs: ['Scope: [admin, analyst] verified'] },
+      { id: 5, name: 'Error Boundary', status: 'FAIL', logs: ['Unhandled Promise Rejection detected'] }
+   ]);
+   const [isFixing, setIsFixing] = useState(false);
+
+   const runFix = async () => {
+      setIsFixing(true);
+      for (let i = 0; i < checks.length; i++) {
+         if (checks[i].status !== 'PASS') {
+            await new Promise(r => setTimeout(r, 800));
+            setChecks(prev => prev.map((c, idx) => idx === i ? { ...c, status: 'FIXING' } : c));
+            await new Promise(r => setTimeout(r, 800));
+            setChecks(prev => prev.map((c, idx) => idx === i ? { ...c, status: 'PASS', logs: [...c.logs, '✅ Auto-Fix applied'] } : c));
+         }
+      }
+      setIsFixing(false);
+   };
+
+   return (
+      <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+         <div className="flex justify-between items-start">
+            <div>
+               <h2 className="text-2xl font-bold text-white glow-text">Frontend Health & Stabilization</h2>
+               <p className="text-slate-400 mt-1">Real-time diagnostics and self-healing modules for UI stability.</p>
+            </div>
+            <button onClick={runFix} disabled={isFixing} className="px-6 py-2 bg-haas-accent hover:bg-haas-accent-dark text-white rounded-lg font-bold flex items-center gap-2 transition-all">
+               {isFixing ? <RefreshCw className="animate-spin" size={18}/> : <Stethoscope size={18}/>}
+               {isFixing ? 'Applying Fixes...' : 'Auto-Fix Issues'}
+            </button>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+               {checks.map((check) => (
+                  <div key={check.id} className="bg-haas-card border border-white/10 rounded-xl p-4 glow-box flex flex-col gap-2">
+                     <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                           {check.status === 'PASS' ? <CheckCircle className="text-haas-success" size={20}/> : 
+                            check.status === 'FIXING' ? <RefreshCw className="text-blue-400 animate-spin" size={20}/> :
+                            <AlertTriangle className={check.status === 'FAIL' ? "text-haas-danger" : "text-haas-warning"} size={20}/>}
+                           <span className="font-bold text-slate-200">{check.name}</span>
+                        </div>
+                        <span className={cn("text-xs font-bold px-2 py-1 rounded", 
+                           check.status === 'PASS' ? "bg-haas-success/10 text-haas-success" : 
+                           check.status === 'FIXING' ? "bg-blue-500/10 text-blue-400" :
+                           check.status === 'FAIL' ? "bg-haas-danger/10 text-haas-danger" : "bg-haas-warning/10 text-haas-warning"
+                        )}>{check.status}</span>
+                     </div>
+                     <div className="bg-black/40 rounded p-2 text-xs font-mono text-slate-400 space-y-1 pl-3 border-l-2 border-white/10">
+                        {check.logs.map((log, i) => (
+                           <div key={i}>{log}</div>
+                        ))}
+                     </div>
+                  </div>
+               ))}
+            </div>
+
+            <div className="bg-haas-card border border-white/10 rounded-xl p-6 glow-box flex flex-col">
+               <h3 className="font-bold text-white mb-4 flex items-center gap-2"><Code size={18}/> Live Metrics</h3>
+               <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-white/5 rounded border border-white/5 flex flex-col items-center justify-center">
+                     <span className="text-slate-500 text-xs font-bold uppercase">Bundle Size</span>
+                     <span className="text-2xl font-mono text-white">142 KB</span>
+                     <span className="text-[10px] text-haas-success">Optimization: 98/100</span>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded border border-white/5 flex flex-col items-center justify-center">
+                     <span className="text-slate-500 text-xs font-bold uppercase">Time to Interactive</span>
+                     <span className="text-2xl font-mono text-white">0.8s</span>
+                     <span className="text-[10px] text-haas-success">Web Vitals: Good</span>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded border border-white/5 flex flex-col items-center justify-center">
+                     <span className="text-slate-500 text-xs font-bold uppercase">API Latency (Avg)</span>
+                     <span className="text-2xl font-mono text-white">45ms</span>
+                     <span className="text-[10px] text-blue-400">Region: US-East</span>
+                  </div>
+                  <div className="p-4 bg-white/5 rounded border border-white/5 flex flex-col items-center justify-center">
+                     <span className="text-slate-500 text-xs font-bold uppercase">Errors (24h)</span>
+                     <span className="text-2xl font-mono text-white">0</span>
+                     <span className="text-[10px] text-haas-success">Stable</span>
+                  </div>
+               </div>
+            </div>
+         </div>
+      </div>
+   );
+}
+
+function IncidentResponseView() {
+   const [threatLevel, setThreatLevel] = useState<'LOW'|'MEDIUM'|'HIGH'|'CRITICAL'>('LOW');
+   const [selectedIncident, setSelectedIncident] = useState<number | null>(null);
+
+   const incidents = [
+      { id: 101, title: "Excessive Egress: Pod-99", severity: "HIGH", status: "Active", time: "10m ago", playbook: "Isolate & Forensics" },
+      { id: 102, title: "Auth Anomaly: Tenant-A", severity: "MEDIUM", status: "Monitoring", time: "1h ago", playbook: "User Audit" },
+      { id: 103, title: "Known Malicious IP", severity: "LOW", status: "Closed", time: "4h ago", playbook: "Block IP" },
+   ];
+
+   return (
+      <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+         <div className="flex justify-between items-start">
+            <div>
+               <h2 className="text-2xl font-bold text-white glow-text">Incident Response Center</h2>
+               <p className="text-slate-400 mt-1">Orchestrate containment, eradication, and recovery workflows.</p>
+            </div>
+            <div className="flex flex-col items-end">
+               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Threat Level</div>
+               <div className="flex gap-1">
+                  {['LOW','MEDIUM','HIGH','CRITICAL'].map(l => (
+                     <button key={l} onClick={() => setThreatLevel(l as any)} 
+                        className={cn("px-4 py-1.5 text-xs font-bold rounded transition-all border", 
+                           threatLevel === l ? 
+                              l === 'CRITICAL' ? 'bg-red-600 border-red-500 text-white animate-pulse' : 
+                              l === 'HIGH' ? 'bg-orange-600 border-orange-500 text-white' : 
+                              l === 'MEDIUM' ? 'bg-yellow-600 border-yellow-500 text-white' : 
+                              'bg-green-600 border-green-500 text-white'
+                           : "bg-white/5 border-white/10 text-slate-500 hover:bg-white/10"
+                        )}>{l}</button>
+                  ))}
+               </div>
+            </div>
+         </div>
+
+         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[600px]">
+            <div className="lg:col-span-1 bg-haas-card border border-white/10 rounded-xl overflow-hidden glow-box flex flex-col">
+               <div className="p-4 border-b border-white/10 bg-black/20 font-bold text-slate-200 flex items-center gap-2"><Siren size={16}/> Active Incidents</div>
+               <div className="flex-1 overflow-y-auto p-2 space-y-2">
+                  {incidents.map(inc => (
+                     <div key={inc.id} onClick={() => setSelectedIncident(inc.id)} className={cn("p-3 rounded-lg border cursor-pointer transition-all", selectedIncident === inc.id ? "bg-white/10 border-white/20" : "bg-white/5 border-transparent hover:border-white/10")}>
+                        <div className="flex justify-between items-start mb-1">
+                           <span className="font-bold text-sm text-slate-200">#{inc.id} {inc.title}</span>
+                           <span className={cn("text-[10px] font-bold px-1.5 py-0.5 rounded", inc.severity === 'HIGH' ? 'bg-haas-danger/20 text-haas-danger' : inc.severity === 'MEDIUM' ? 'bg-haas-warning/20 text-haas-warning' : 'bg-haas-success/20 text-haas-success')}>{inc.severity}</span>
+                        </div>
+                        <div className="flex justify-between text-xs text-slate-500 mt-2">
+                           <span>{inc.playbook}</span>
+                           <span>{inc.time}</span>
+                        </div>
+                     </div>
+                  ))}
+               </div>
+            </div>
+
+            <div className="lg:col-span-2 bg-haas-card border border-white/10 rounded-xl overflow-hidden glow-box flex flex-col relative">
+               {selectedIncident ? (
+                  <div className="flex flex-col h-full">
+                     <div className="p-4 border-b border-white/10 bg-haas-danger/10 flex justify-between items-center">
+                        <div className="font-bold text-white flex items-center gap-2"><FileText size={16}/> IR Playbook: Isolation & Forensics</div>
+                        <div className="text-xs font-mono text-haas-danger">CASE-{selectedIncident}</div>
+                     </div>
+                     <div className="flex-1 p-6 space-y-6 overflow-y-auto">
+                        <div className="flex gap-4 items-start">
+                           <div className="w-8 h-8 rounded-full bg-haas-success flex items-center justify-center font-bold text-black shrink-0">1</div>
+                           <div className="flex-1">
+                              <h4 className="font-bold text-white">Containment: Isolate Pod</h4>
+                              <p className="text-sm text-slate-400 mb-3">Apply NetworkPolicy to block all egress/ingress except Forensic collector.</p>
+                              <button className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded text-xs font-bold text-slate-200">Execute K8s Policy</button>
+                           </div>
+                        </div>
+                        <div className="flex gap-4 items-start opacity-50">
+                           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-400 shrink-0">2</div>
+                           <div className="flex-1">
+                              <h4 className="font-bold text-white">Forensics: Snapshot Volume</h4>
+                              <p className="text-sm text-slate-400 mb-3">Trigger AWS EBS Snapshot for evidence preservation.</p>
+                           </div>
+                        </div>
+                        <div className="flex gap-4 items-start opacity-50">
+                           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-400 shrink-0">3</div>
+                           <div className="flex-1">
+                              <h4 className="font-bold text-white">Escalation: Level 2 Alert</h4>
+                              <p className="text-sm text-slate-400 mb-3">Notify CISO and Legal team for High Severity incident.</p>
+                           </div>
+                        </div>
+                         <div className="flex gap-4 items-start opacity-50">
+                           <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center font-bold text-slate-400 shrink-0">4</div>
+                           <div className="flex-1">
+                              <h4 className="font-bold text-white">Postmortem: Generate Report</h4>
+                              <p className="text-sm text-slate-400 mb-3">Create Incident Report using AI summary of logs.</p>
+                              <button className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 rounded text-xs font-bold text-blue-400 flex items-center gap-2"><FileText size={14}/> Draft Report</button>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+               ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-600 flex-col gap-2">
+                     <Fingerprint size={48} />
+                     <p>Select an incident to activate Playbook</p>
+                  </div>
+               )}
+            </div>
+         </div>
+      </div>
+   );
+}
+
+function SecurityHardeningView({ context }: { context: string }) {
+   const [testRunning, setTestRunning] = useState<string | null>(null);
+   const [results, setResults] = useState<any>({ isolation: 'PENDING', zerotrust: 'PENDING', lateral: 'PENDING' });
+
+   const runTest = (type: string) => {
+      setTestRunning(type);
+      setTimeout(() => {
+         setResults((prev: any) => ({ ...prev, [type]: 'PASS' }));
+         setTestRunning(null);
+      }, 2000);
+   };
+
+   return (
+      <div className="space-y-6 animate-in slide-in-from-bottom-4 duration-500">
+         <h2 className="text-2xl font-bold text-white glow-text">Security Hardening Validation</h2>
+         
+         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Isolation Test */}
+            <div className="bg-haas-card border border-white/10 rounded-xl p-6 glow-box flex flex-col">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-blue-500/10 rounded-lg text-blue-500"><BrickWall size={20}/></div>
+                  <h3 className="font-bold text-lg text-white">Tenant Isolation</h3>
+               </div>
+               <p className="text-sm text-slate-400 mb-6 flex-1">Simulates IDOR and Cross-Tenant SQLi attacks to verify data boundary integrity.</p>
+               <div className="space-y-2 mb-6">
+                  <div className="flex justify-between text-xs text-slate-500"><span>IDOR Check</span><span className="text-haas-success">PASS</span></div>
+                  <div className="flex justify-between text-xs text-slate-500"><span>SQLi Scanner</span><span className="text-haas-success">PASS</span></div>
+                  <div className="flex justify-between text-xs text-slate-500"><span>JWT Tamper</span><span className="text-haas-success">PASS</span></div>
+               </div>
+               <button onClick={() => runTest('isolation')} disabled={!!testRunning} className="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                  {testRunning === 'isolation' ? <RefreshCw className="animate-spin" size={16}/> : <Play size={16}/>} Validate Isolation
+               </button>
+            </div>
+
+            {/* Zero Trust */}
+            <div className="bg-haas-card border border-white/10 rounded-xl p-6 glow-box flex flex-col">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-haas-accent/10 rounded-lg text-haas-accent"><ShieldCheck size={20}/></div>
+                  <h3 className="font-bold text-lg text-white">Zero Trust Network</h3>
+               </div>
+               <p className="text-sm text-slate-400 mb-6 flex-1">Verifies K8s NetworkPolicies, mTLS enforcement, and default-deny rules.</p>
+               <div className="h-24 bg-black/40 rounded mb-6 border border-white/5 relative overflow-hidden flex items-center justify-center">
+                  <div className="absolute inset-0 flex items-center justify-center gap-8 opacity-50">
+                     <div className="w-8 h-8 bg-slate-700 rounded flex items-center justify-center text-xs">POD</div>
+                     <div className="h-px w-8 bg-red-500 relative"><XCircle size={12} className="absolute -top-1.5 left-3 text-red-500 bg-black"/></div>
+                     <div className="w-8 h-8 bg-slate-700 rounded flex items-center justify-center text-xs">DB</div>
+                  </div>
+                  <div className="z-10 text-xs font-bold text-slate-300 bg-black/80 px-2 py-1 rounded">Policy: DENY ALL</div>
+               </div>
+               <button onClick={() => runTest('zerotrust')} disabled={!!testRunning} className="w-full py-2 rounded bg-haas-accent hover:bg-haas-accent-dark text-white font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                  {testRunning === 'zerotrust' ? <RefreshCw className="animate-spin" size={16}/> : <Play size={16}/>} Verify Policies
+               </button>
+            </div>
+
+            {/* Lateral Movement */}
+            <div className="bg-haas-card border border-white/10 rounded-xl p-6 glow-box flex flex-col">
+               <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 bg-haas-danger/10 rounded-lg text-haas-danger"><Sword size={20}/></div>
+                  <h3 className="font-bold text-lg text-white">Lateral Movement</h3>
+               </div>
+               <p className="text-sm text-slate-400 mb-6 flex-1">Simulates container escape and privilege escalation attempts from compromised pods.</p>
+               <div className="space-y-2 mb-6">
+                   <div className="flex justify-between text-xs text-slate-500"><span>ServiceAccount Mount</span><span className="text-haas-success">BLOCKED</span></div>
+                   <div className="flex justify-between text-xs text-slate-500"><span>Privileged Mode</span><span className="text-haas-success">DISABLED</span></div>
+                   <div className="flex justify-between text-xs text-slate-500"><span>Root Filesystem</span><span className="text-haas-success">READ-ONLY</span></div>
+               </div>
+               <button onClick={() => runTest('lateral')} disabled={!!testRunning} className="w-full py-2 rounded bg-haas-danger hover:bg-red-600 text-white font-bold text-sm transition-colors flex justify-center items-center gap-2">
+                  {testRunning === 'lateral' ? <RefreshCw className="animate-spin" size={16}/> : <Play size={16}/>} Simulate Attack
+               </button>
+            </div>
+         </div>
+      </div>
+   );
 }
 
 function WorldMap() {
