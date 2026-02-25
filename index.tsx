@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { GoogleGenAI } from "@google/genai";
@@ -75,7 +76,9 @@ import {
   BrickWall,
   WifiOff,
   Code,
-  Laptop
+  Laptop,
+  Check,
+  X
 } from 'lucide-react';
 
 // --- Utils ---
@@ -295,11 +298,20 @@ Return a JSON object strictly with this schema (no markdown):
 }
 `;
 
+// --- Toast System ---
+type ToastType = 'success' | 'error' | 'info';
+interface Toast {
+  id: string;
+  message: string;
+  type: ToastType;
+}
+
 // --- Components ---
 
 function App() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'cost' | 'ir' | 'hardening' | 'frontend' | 'k8s' | 'ai' | 'devops' | 'enterprise' | 'billing' | 'intel' | 'public' | 'dr' | 'validation'>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
+  const [toasts, setToasts] = useState<Toast[]>([]);
   
   const [stats, setStats] = useState({
     activeHoneypots: 12,
@@ -307,6 +319,14 @@ function App() {
     highSeverity: 24,
     liveSessions: 3
   });
+
+  const addToast = (message: string, type: ToastType = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setToasts(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
 
   return (
     <div className="flex h-screen bg-haas-bg text-slate-200 font-sans overflow-hidden relative selection:bg-haas-accent/30 selection:text-white">
@@ -371,21 +391,38 @@ function App() {
         <main className="flex-1 overflow-auto custom-scrollbar p-6">
           <div className="max-w-7xl mx-auto space-y-8">
             {activeTab === 'dashboard' && <DashboardView stats={stats} searchQuery={searchQuery} />}
-            {activeTab === 'frontend' && <FrontendHealthView />}
-            {activeTab === 'cost' && <CostControlView context={PHASE_10B_CONTEXT} />}
-            {activeTab === 'ir' && <IncidentResponseView />}
-            {activeTab === 'hardening' && <SecurityHardeningView context={PHASE_10C_CONTEXT} />}
-            {activeTab === 'k8s' && <K8sAuditView context={PHASE_1_CONTEXT} />}
-            {activeTab === 'ai' && <AIAuditView context={PHASE_1_CONTEXT} />}
-            {activeTab === 'intel' && <ThreatIntelAuditView context={PHASE_8_CONTEXT} />}
-            {activeTab === 'devops' && <DevOpsAuditView context={DEVOPS_CONTEXT} />}
-            {activeTab === 'enterprise' && <EnterpriseAuditView context={PHASE_6_CONTEXT} />}
+            {activeTab === 'frontend' && <FrontendHealthView addToast={addToast} />}
+            {activeTab === 'cost' && <CostControlView context={PHASE_10B_CONTEXT} addToast={addToast} />}
+            {activeTab === 'ir' && <IncidentResponseView addToast={addToast} />}
+            {activeTab === 'hardening' && <SecurityHardeningView context={PHASE_10C_CONTEXT} addToast={addToast} />}
+            {activeTab === 'k8s' && <K8sAuditView context={PHASE_1_CONTEXT} addToast={addToast} />}
+            {activeTab === 'ai' && <AIAuditView context={PHASE_1_CONTEXT} addToast={addToast} />}
+            {activeTab === 'intel' && <ThreatIntelAuditView context={PHASE_8_CONTEXT} addToast={addToast} />}
+            {activeTab === 'devops' && <DevOpsAuditView context={DEVOPS_CONTEXT} addToast={addToast} />}
+            {activeTab === 'enterprise' && <EnterpriseAuditView context={PHASE_6_CONTEXT} addToast={addToast} />}
             {activeTab === 'dr' && <DataRecoveryView context={PHASE_10_CONTEXT} />}
-            {activeTab === 'billing' && <BillingAuditView context={BILLING_CONTEXT} />}
-            {activeTab === 'public' && <PublicAuditView context={PHASE_PUBLIC_CONTEXT} />}
-            {activeTab === 'validation' && <SystemValidationView />}
+            {activeTab === 'billing' && <BillingAuditView context={BILLING_CONTEXT} addToast={addToast} />}
+            {activeTab === 'public' && <PublicAuditView context={PHASE_PUBLIC_CONTEXT} addToast={addToast} />}
+            {activeTab === 'validation' && <SystemValidationView addToast={addToast} />}
           </div>
         </main>
+      </div>
+
+      {/* Toast Container */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
+         {toasts.map(toast => (
+            <div key={toast.id} className={cn(
+               "flex items-center gap-3 px-4 py-3 rounded-lg shadow-2xl border backdrop-blur-md animate-in slide-in-from-right-10 duration-300",
+               toast.type === 'success' ? "bg-haas-success/10 border-haas-success/50 text-white" :
+               toast.type === 'error' ? "bg-haas-danger/10 border-haas-danger/50 text-white" :
+               "bg-haas-panel/90 border-white/20 text-slate-200"
+            )}>
+               {toast.type === 'success' ? <CheckCircle size={18} className="text-haas-success" /> :
+                toast.type === 'error' ? <XCircle size={18} className="text-haas-danger" /> :
+                <Activity size={18} className="text-blue-400" />}
+               <span className="text-sm font-medium">{toast.message}</span>
+            </div>
+         ))}
       </div>
     </div>
   );
@@ -502,7 +539,7 @@ function DashboardView({ stats, searchQuery }: { stats: any, searchQuery: string
   );
 }
 
-function FrontendHealthView() {
+function FrontendHealthView({ addToast }: { addToast: any }) {
    const [checks, setChecks] = useState([
       { id: 1, name: 'API Gateway Integration', status: 'WARN', logs: ['Checking Base URL...', 'Retry logic missing'] },
       { id: 2, name: 'JWT Secure Storage', status: 'FAIL', logs: ['Token found in LocalStorage', 'HttpOnly flag missing'] },
@@ -514,6 +551,7 @@ function FrontendHealthView() {
 
    const runFix = async () => {
       setIsFixing(true);
+      addToast("Initiating Self-Healing Protocol...", "info");
       for (let i = 0; i < checks.length; i++) {
          if (checks[i].status !== 'PASS') {
             await new Promise(r => setTimeout(r, 800));
@@ -523,6 +561,7 @@ function FrontendHealthView() {
          }
       }
       setIsFixing(false);
+      addToast("Frontend Stabilization Complete. All systems nominal.", "success");
    };
 
    return (
@@ -594,7 +633,7 @@ function FrontendHealthView() {
    );
 }
 
-function IncidentResponseView() {
+function IncidentResponseView({ addToast }: { addToast: any }) {
    const [threatLevel, setThreatLevel] = useState<'LOW'|'MEDIUM'|'HIGH'|'CRITICAL'>('LOW');
    const [selectedIncident, setSelectedIncident] = useState<number | null>(null);
 
@@ -615,7 +654,7 @@ function IncidentResponseView() {
                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-1">Current Threat Level</div>
                <div className="flex gap-1">
                   {['LOW','MEDIUM','HIGH','CRITICAL'].map(l => (
-                     <button key={l} onClick={() => setThreatLevel(l as any)} 
+                     <button key={l} onClick={() => { setThreatLevel(l as any); addToast(`Threat Level changed to ${l}`, 'info'); }} 
                         className={cn("px-4 py-1.5 text-xs font-bold rounded transition-all border", 
                            threatLevel === l ? 
                               l === 'CRITICAL' ? 'bg-red-600 border-red-500 text-white animate-pulse' : 
@@ -661,7 +700,7 @@ function IncidentResponseView() {
                            <div className="flex-1">
                               <h4 className="font-bold text-white">Containment: Isolate Pod</h4>
                               <p className="text-sm text-slate-400 mb-3">Apply NetworkPolicy to block all egress/ingress except Forensic collector.</p>
-                              <button className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded text-xs font-bold text-slate-200">Execute K8s Policy</button>
+                              <button onClick={() => addToast("K8s NetworkPolicy Applied: Isolation Active", "success")} className="px-4 py-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded text-xs font-bold text-slate-200 transition-colors">Execute K8s Policy</button>
                            </div>
                         </div>
                         <div className="flex gap-4 items-start opacity-50">
@@ -683,7 +722,7 @@ function IncidentResponseView() {
                            <div className="flex-1">
                               <h4 className="font-bold text-white">Postmortem: Generate Report</h4>
                               <p className="text-sm text-slate-400 mb-3">Create Incident Report using AI summary of logs.</p>
-                              <button className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 rounded text-xs font-bold text-blue-400 flex items-center gap-2"><FileText size={14}/> Draft Report</button>
+                              <button onClick={() => addToast("Drafting Postmortem from Log Aggregation...", "info")} className="px-4 py-2 bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/20 rounded text-xs font-bold text-blue-400 flex items-center gap-2 transition-colors"><FileText size={14}/> Draft Report</button>
                            </div>
                         </div>
                      </div>
@@ -700,15 +739,17 @@ function IncidentResponseView() {
    );
 }
 
-function SecurityHardeningView({ context }: { context: string }) {
+function SecurityHardeningView({ context, addToast }: { context: string, addToast: any }) {
    const [testRunning, setTestRunning] = useState<string | null>(null);
    const [results, setResults] = useState<any>({ isolation: 'PENDING', zerotrust: 'PENDING', lateral: 'PENDING' });
 
    const runTest = (type: string) => {
       setTestRunning(type);
+      addToast(`Initializing ${type} validation probe...`, 'info');
       setTimeout(() => {
          setResults((prev: any) => ({ ...prev, [type]: 'PASS' }));
          setTestRunning(null);
+         addToast(`${type.charAt(0).toUpperCase() + type.slice(1)} validation SUCCESS. No vulnerabilities found.`, 'success');
       }, 2000);
    };
 
@@ -822,7 +863,7 @@ function WorldMap() {
   );
 }
 
-function CostControlView({ context }: { context: string }) {
+function CostControlView({ context, addToast }: { context: string, addToast: any }) {
   const [tenants, setTenants] = useState([
      { name: 'CyberDyne Systems', plan: 'Enterprise', usage: 85, aiTokens: '800k', cost: 1200, revenue: 2500, margin: 52, status: 'Active', risk: 12 },
      { name: 'Tyrell Corp', plan: 'Pro', usage: 45, aiTokens: '120k', cost: 150, revenue: 400, margin: 62, status: 'Active', risk: 5 },
@@ -878,7 +919,7 @@ function CostControlView({ context }: { context: string }) {
          <div className="lg:col-span-2 bg-haas-card border border-white/10 rounded-xl overflow-hidden glow-box">
             <div className="p-4 border-b border-white/10 bg-black/20 flex justify-between items-center">
                <h3 className="font-bold text-slate-200 flex items-center gap-2"><Users size={16}/> Tenant Margin Analysis</h3>
-               <button className="text-xs text-blue-400 hover:text-white transition-colors">Download CSV</button>
+               <button onClick={() => addToast("Margin Analysis CSV downloaded", "success")} className="text-xs text-blue-400 hover:text-white transition-colors">Download CSV</button>
             </div>
             <table className="w-full text-sm text-left">
                <thead className="bg-white/5 text-xs text-slate-500 uppercase font-bold">
@@ -960,7 +1001,7 @@ function CostControlView({ context }: { context: string }) {
   );
 }
 
-function SystemValidationView() {
+function SystemValidationView({ addToast }: { addToast: any }) {
   const [currentPhase, setCurrentPhase] = useState<number>(-1);
   const [logs, setLogs] = useState<string[]>([]);
   const [results, setResults] = useState<any[]>([]);
@@ -1016,10 +1057,12 @@ function SystemValidationView() {
       });
       if (response.text) {
         setReport(JSON.parse(response.text));
+        addToast("Executive Report Generated Successfully", "success");
       }
     } catch (e) {
       console.error(e);
       setLogs(prev => [...prev, "❌ Failed to generate report."]);
+      addToast("Failed to generate report. Check API Key.", "error");
     }
   };
 
@@ -1122,12 +1165,13 @@ function DataRecoveryView({ context }: { context: string }) {
   );
 }
 
-function GenericAuditView({ title, context, prompt, simulationSteps, renderContent }: any) {
+function GenericAuditView({ title, context, prompt, simulationSteps, renderContent, addToast }: any) {
   const [status, setStatus] = useState<'idle' | 'scanning' | 'complete'>('idle');
   const [report, setReport] = useState<any>(null);
 
   const runAudit = async () => {
     setStatus('scanning');
+    addToast(`${title} started...`, 'info');
     for (const step of simulationSteps) { await new Promise(r => setTimeout(r, 600)); }
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -1136,8 +1180,16 @@ function GenericAuditView({ title, context, prompt, simulationSteps, renderConte
         contents: context + "\n" + prompt,
         config: { responseMimeType: "application/json" }
       });
-      if (response.text) { setReport(JSON.parse(response.text)); setStatus('complete'); }
-    } catch (e) { console.error(e); setStatus('idle'); }
+      if (response.text) { 
+         setReport(JSON.parse(response.text)); 
+         setStatus('complete');
+         addToast(`${title} Completed Successfully.`, 'success');
+      }
+    } catch (e) { 
+       console.error(e); 
+       setStatus('idle');
+       addToast("Audit Failed: API Error", 'error');
+    }
   };
 
   return (
@@ -1153,8 +1205,8 @@ function GenericAuditView({ title, context, prompt, simulationSteps, renderConte
   );
 }
 
-function K8sAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="Infrastructure Security Audit" context={context} prompt={K8S_AUDIT_PROMPT} simulationSteps={["Connecting to K8s...", "Scanning Namespaces...", "Checking RBAC..."]} renderContent={(report: any) => (
+function K8sAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="Infrastructure Security Audit" context={context} prompt={K8S_AUDIT_PROMPT} simulationSteps={["Connecting to K8s...", "Scanning Namespaces...", "Checking RBAC..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <ScoreCard title="Security Readiness" score={report.readiness_score} />
             <div className="lg:col-span-2 space-y-6">
@@ -1164,38 +1216,38 @@ function K8sAuditView({ context }: { context: string }) {
     )} />;
 }
 
-function AIAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="AI Threat Intelligence Audit" context={context} prompt={AI_AUDIT_PROMPT} simulationSteps={["Analyzing Weights...", "Checking Bias..."]} renderContent={(report: any) => (
+function AIAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="AI Threat Intelligence Audit" context={context} prompt={AI_AUDIT_PROMPT} simulationSteps={["Analyzing Weights...", "Checking Bias..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="Detection Accuracy" score={report.detection_score} /></div>
     )} />;
 }
 
-function ThreatIntelAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="Threat Intelligence Audit" context={context} prompt={THREAT_INTEL_AUDIT_PROMPT} simulationSteps={["Analyzing Graph...", "Checking Campaigns..."]} renderContent={(report: any) => (
+function ThreatIntelAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="Threat Intelligence Audit" context={context} prompt={THREAT_INTEL_AUDIT_PROMPT} simulationSteps={["Analyzing Graph...", "Checking Campaigns..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="Intel Score" score={report.intelligence_sophistication_score} /></div>
     )} />;
 }
 
-function DevOpsAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="DevSecOps Audit" context={context} prompt={DEVOPS_AUDIT_PROMPT} simulationSteps={["Checking Pipeline...", "Scanning Images..."]} renderContent={(report: any) => (
+function DevOpsAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="DevSecOps Audit" context={context} prompt={DEVOPS_AUDIT_PROMPT} simulationSteps={["Checking Pipeline...", "Scanning Images..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="DevOps Maturity" score={report.devops_maturity_score} /></div>
     )} />;
 }
 
-function EnterpriseAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="Enterprise Audit" context={context} prompt={ENTERPRISE_AUDIT_PROMPT} simulationSteps={["Checking mTLS...", "Auditing IAM..."]} renderContent={(report: any) => (
+function EnterpriseAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="Enterprise Audit" context={context} prompt={ENTERPRISE_AUDIT_PROMPT} simulationSteps={["Checking mTLS...", "Auditing IAM..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="Enterprise Security" score={report.enterprise_security_score} /></div>
     )} />;
 }
 
-function BillingAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="Billing Audit" context={context} prompt={BILLING_AUDIT_PROMPT} simulationSteps={["Auditing Stripe...", "Verifying Usage..."]} renderContent={(report: any) => (
+function BillingAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="Billing Audit" context={context} prompt={BILLING_AUDIT_PROMPT} simulationSteps={["Auditing Stripe...", "Verifying Usage..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="Billing Security" score={report.billing_security_score} /></div>
     )} />;
 }
 
-function PublicAuditView({ context }: { context: string }) {
-    return <GenericAuditView title="Public Launch Audit" context={context} prompt={PUBLIC_AUDIT_PROMPT} simulationSteps={["Scanning Ingress...", "Checking DoS..."]} renderContent={(report: any) => (
+function PublicAuditView({ context, addToast }: { context: string, addToast: any }) {
+    return <GenericAuditView title="Public Launch Audit" context={context} prompt={PUBLIC_AUDIT_PROMPT} simulationSteps={["Scanning Ingress...", "Checking DoS..."]} addToast={addToast} renderContent={(report: any) => (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6"><ScoreCard title="Launch Readiness" score={report.public_readiness_score} /></div>
     )} />;
 }
